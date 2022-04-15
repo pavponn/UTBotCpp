@@ -28,16 +28,16 @@ bool IRParser::parseModule(const fs::path &rootBitcode, tests::TestsMap &tests) 
             for (auto it = tests.begin(); it != tests.end(); it++) {
                 fs::path const &sourceFile = it.key();
                 tests::Tests &test = it.value();
-                test.isFilePresentedInArtifact = true;
+                test.isFilePresentedInArtifact = false;
                 for (const auto &[methodName, methodDescription] : test.methods) {
                     std::string entryPointFunction = KleeUtils::entryPointFunction(test, methodName, true);
                     string methodDebugInfo =
                         StringUtils::stringFormat("Method: '%s', file: '%s'", methodName, sourceFile);
                     if (llvm::Function *pFunction = module->getFunction(entryPointFunction)) {
+                        test.isFilePresentedInArtifact = true;
                         continue;
                     } else {
                         LOG_S(DEBUG) << "llvm::Function is null: " << methodDebugInfo;
-                        test.isFilePresentedInArtifact = false;
                     }
                 }
             }

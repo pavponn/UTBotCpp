@@ -583,18 +583,22 @@ namespace printer {
                          stubName, "stub", makeStatic);
     }
 
-    void Printer::writeAccessPrivateMacros(types::TypesHandler const *typesHandler, const Tests &tests, bool onlyChangeable) {
+    void Printer::writeAccessPrivateMacros(types::TypesHandler const *typesHandler, const Tests &tests, bool onlyChangeable,
+                                      const std::function<bool(tests::Tests::MethodDescription const &)> &methodFilter) {
         if (srcLanguage == utbot::Language::CXX) {
             ss << NL;
             strInclude("access_private.hpp");
             ss << NL;
             std::unordered_set<uint64_t> checkedOnPrivate;
-            for (const auto &[methodName, testMethod] : tests.methods) {
+            for (const auto &[methodName, testMethod]: tests.methods) {
+                if (!methodFilter(testMethod)) {
+                    continue;
+                }
                 addAccessor(typesHandler, testMethod.returnType, checkedOnPrivate);
                 if (testMethod.isClassMethod()) {
                     addAccessor(typesHandler, testMethod.classObj->type, checkedOnPrivate);
                 }
-                for (const auto& param : testMethod.params) {
+                for (const auto &param: testMethod.params) {
                     if (!onlyChangeable || param.isChangeable()) {
                         addAccessor(typesHandler, param.type, checkedOnPrivate);
                     }
@@ -604,12 +608,18 @@ namespace printer {
         }
     }
 
+    void Printer::writeAccessPrivateMacros(types::TypesHandler const *typesHandler,
+                                           const Tests &tests, bool onlyChangeable) {
+        writeAccessPrivateMacros(typesHandler, tests, onlyChangeable,
+                                 [](tests::Tests::MethodDescription const &val) { return true; });
+    }
+
     void Printer::addAccessor(const types::TypesHandler *typesHandler, const types::Type &type,
                               std::unordered_set<uint64_t> &checkedOnPrivate) {
         if (!checkedOnPrivate.count(type.getId()) && typesHandler->isStruct(type)) {
             checkedOnPrivate.insert(type.getId());
             for (const auto& field : typesHandler->getStructInfo(type).fields) {
-                if (field.accessSpecifier != types::Field::AS_pubic) {
+                if (field.accessSpecifier != types::AccessSpecifier::AS_pubic && !field.type.isArray()) {
                     ss << StringUtils::stringFormat("ACCESS_PRIVATE_FIELD(%s, %s, %s)",
                                                     type.typeName(),
                                                     field.type.typeName(),

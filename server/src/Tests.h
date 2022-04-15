@@ -413,6 +413,7 @@ namespace tests {
             vector<MethodTestCase> testCases;
             typedef std::unordered_map<string, vector<MethodTestCase>> SuiteNameToTestCasesMap;
             SuiteNameToTestCasesMap suiteTestCases;
+            types::AccessSpecifier accessSpecifier;
 
             bool operator==(const MethodDescription &other) const;
 
@@ -452,7 +453,7 @@ namespace tests {
             }
 
             bool hasChangeable() const {
-                for(const auto& i : params) {
+                for (const auto& i : params) {
                     if (i.isChangeable()) {
                         return true;
                     }

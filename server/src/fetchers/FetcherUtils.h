@@ -64,4 +64,6 @@ template <typename StatementType> bool canBeMissed(StatementType const& statemen
            llvm::isa<clang::ParenExpr>(statement) || llvm::isa<clang::CStyleCastExpr>(statement);
 }
 
+types::AccessSpecifier getAS(const clang::Decl *D);
+
 #endif //UNITTESTBOT_FETCHERUTILS_H

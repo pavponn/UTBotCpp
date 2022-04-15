@@ -63,7 +63,7 @@ namespace PrinterUtils {
         if (field.name.empty()) {
             return objectName;
         }
-        if (field.accessSpecifier == types::Field::AS_pubic) {
+        if (field.accessSpecifier == types::AccessSpecifier::AS_pubic) {
             return getFieldAccess(objectName, field.name);
         }
         return StringUtils::stringFormat("access_private::%s(%s)", field.name, objectName);

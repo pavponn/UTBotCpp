@@ -24,7 +24,7 @@ static bool canBeReplaced(const string &nameInMap, const string &name) {
     return nameInMap.empty() && !name.empty();
 }
 
-template <class Info>
+template<class Info>
 bool isCandidateToReplace(uint64_t id,
                           std::unordered_map<uint64_t, Info> &someMap,
                           std::string const &name) {
@@ -44,9 +44,9 @@ static size_t getDeclAlignment(const clang::TagDecl *T) {
     return T->getASTContext().getTypeAlign(T->getTypeForDecl()) / 8;
 }
 
-template <class Info>
+template<class Info>
 static void addInfo(uint64_t id, std::unordered_map<uint64_t, Info> &someMap, Info info) {
-    auto [iterator, inserted] = someMap.emplace(id, info);
+    auto[iterator, inserted] = someMap.emplace(id, info);
     LOG_IF_S(MAX, !inserted) << "Type with id=" << id << " already existed";
     if (!inserted) {
         std::string nameInMap = iterator->second.name;
@@ -77,7 +77,8 @@ void TypesResolver::resolveStruct(const clang::RecordDecl *D, const std::string 
     structInfo.filePath = Paths::getCCJsonFileFullPath(filename, parent->buildRootPath);
     structInfo.name = name;
     structInfo.hasUnnamedFields = false;
-
+    structInfo.canBeConstruct = false;
+    structInfo.isCLike = true;
 
     if (Paths::isGtest(structInfo.filePath)) {
         return;
@@ -88,8 +89,10 @@ void TypesResolver::resolveStruct(const clang::RecordDecl *D, const std::string 
     ss << "Struct: " << structInfo.name << "\n"
        << "\tFile path: " << structInfo.filePath.string() << "";
     std::vector<types::Field> fields;
-    fs::path sourceFilePath = sourceManager.getFileEntryForID(sourceManager.getMainFileID())->tryGetRealPathName().str();
-    for (const clang::FieldDecl *F : D->fields()) {
+    fs::path sourceFilePath = sourceManager.getFileEntryForID(
+            sourceManager.getMainFileID())->tryGetRealPathName().str();
+
+    for (const clang::FieldDecl *F: D->fields()) {
         if (F->isUnnamedBitfield()) {
             continue;
         }
@@ -122,28 +125,28 @@ void TypesResolver::resolveStruct(const clang::RecordDecl *D, const std::string 
         }
         structInfo.hasUnnamedFields |= F->isAnonymousStructOrUnion();
         if (Paths::getSourceLanguage(sourceFilePath) == utbot::Language::CXX) {
-            switch (F->getAccess()) {
-                case clang::AccessSpecifier::AS_private :
-                    field.accessSpecifier = types::Field::AS_private;
-                    break;
-                case clang::AccessSpecifier::AS_protected :
-                    field.accessSpecifier = types::Field::AS_protected;
-                    break;
-                case clang::AccessSpecifier::AS_public :
-                    field.accessSpecifier = types::Field::AS_pubic;
-                    break;
-                case clang::AccessSpecifier::AS_none :
-                    field.accessSpecifier = types::Field::AS_none;
-                    break;
-            }
+            field.accessSpecifier = getAS(F);
         } else {
-            field.accessSpecifier = types::Field::AS_pubic;
+            field.accessSpecifier = types::AccessSpecifier::AS_pubic;
         }
         fields.push_back(field);
     }
     structInfo.fields = fields;
     structInfo.size = getRecordSize(D);
     structInfo.alignment = getDeclAlignment(D);
+    if (auto CXXD = dynamic_cast<const clang::CXXRecordDecl *>(D)) {
+        LOG_S(MAX) << "Struct/Class " << structInfo.name << " CXX class";
+        if (!CXXD->isCLike()) {
+            structInfo.isCLike = false;
+        }
+        for (const auto &it: CXXD->ctors()) {
+            if (it->isDefaultConstructor() && !it->isDeleted() && getAS(it) == types::AccessSpecifier::AS_pubic) {
+                structInfo.canBeConstruct = true;
+                break;
+            }
+        }
+        LOG_IF_S(MAX, !structInfo.canBeConstruct) << "Struct/Class " << structInfo.name << " hasn't default public constructor";
+    }
 
     addInfo(id, parent->projectTypes->structs, structInfo);
     ss << "\nName: " << structInfo.name << ", id: " << id << " , size: " << structInfo.size << "\n";
@@ -185,7 +188,7 @@ void TypesResolver::resolveEnum(const clang::EnumDecl *EN, const string &name) {
     types::EnumInfo enumInfo;
     enumInfo.name = name;
     enumInfo.filePath = Paths::getCCJsonFileFullPath(
-        sourceManager.getFilename(EN->getLocation()).str(), parent->buildRootPath.string());
+            sourceManager.getFilename(EN->getLocation()).str(), parent->buildRootPath.string());
     clang::QualType promotionType = EN->getPromotionType();
     enumInfo.size = context.getTypeSize(promotionType) / 8;
 
@@ -212,6 +215,7 @@ void TypesResolver::resolveEnum(const clang::EnumDecl *EN, const string &name) {
        << "\tFile path: " << enumInfo.filePath.string();
     LOG_S(DEBUG) << ss.str();
 }
+
 void TypesResolver::updateMaximumAlignment(uint64_t alignment) const {
     uint64_t &maximumAlignment = *(this->parent->maximumAlignment);
     maximumAlignment = std::max(maximumAlignment, alignment);
@@ -228,7 +232,7 @@ void TypesResolver::resolveUnion(const clang::RecordDecl *D, const std::string &
     }
     types::UnionInfo unionInfo;
     unionInfo.filePath = Paths::getCCJsonFileFullPath(
-        sourceManager.getFilename(D->getLocation()).str(), parent->buildRootPath.string());
+            sourceManager.getFilename(D->getLocation()).str(), parent->buildRootPath.string());
     unionInfo.name = name;
 
     if (Paths::isGtest(unionInfo.filePath)) {
@@ -241,7 +245,7 @@ void TypesResolver::resolveUnion(const clang::RecordDecl *D, const std::string &
        << "\tFile path: " << unionInfo.filePath.string() << "";
     std::vector<types::Field> fields;
     unionInfo.hasUnnamedFields = false;
-    for (const clang::FieldDecl *F : D->fields()) {
+    for (const clang::FieldDecl *F: D->fields()) {
         if (F->isUnnamedBitfield()) {
             continue;
         }

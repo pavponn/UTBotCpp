@@ -347,6 +347,9 @@ void printer::TestsPrinter::printClassObject(const Tests::MethodDescription &met
     if (methodDescription.isClassMethod()) {
         const auto &param = methodDescription.classObj.value();
         const auto &value = testCase.classPreValues.value();
+        if (!typesHandler->getStructInfo(param.type).isCLike) {
+            strComment("struct/class maybe can't be construct");
+        }
         verboseParameter(methodDescription, param, value, true);
     }
 }

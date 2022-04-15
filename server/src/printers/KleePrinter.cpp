@@ -52,7 +52,7 @@ fs::path KleePrinter::writeTmpKleeFile(
     LOG_S(DEBUG) << "Writing tmpKleeFile for " << testedMethod << " inside " << tests.sourceFilePath;
 
     bool hasMethod = false;
-    for (const auto &[methodName,testMethod ]: tests.methods) {
+    for (const auto &[methodName, testMethod]: tests.methods) {
         if (methodFilter(testMethod)) {
             hasMethod = true;
         }
@@ -80,8 +80,11 @@ fs::path KleePrinter::writeTmpKleeFile(
     strInclude("stdlib.h", true);
     ss << NL;
     writeStubsForStructureFields(tests);
-
-    writeAccessPrivateMacros(typesHandler, tests, false);
+    writeAccessPrivateMacros(typesHandler, tests, false, [methodFilter, onlyForOneClass, onlyForOneFunction, testedMethod, testedClass] (
+            tests::Tests::MethodDescription const &testMethod) {
+        return methodFilter(testMethod) && !((onlyForOneFunction && testMethod.name != testedMethod) ||
+                                             (onlyForOneClass && testMethod.isClassMethod() && testMethod.classObj->type.typeName() != testedClass));
+    });
 
     for (const auto &[methodName, testMethod] : tests.methods) {
         if (!methodFilter(testMethod)) {

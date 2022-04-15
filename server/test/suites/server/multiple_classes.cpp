@@ -16,3 +16,7 @@ int second_class::third_class::get3() {
     return 3;
 }
 
+first_class::first_class() {}
+second_class::second_class() {}
+second_class::third_class::third_class() {}
+

@@ -559,8 +559,7 @@ Status Server::TestsGenServiceImpl::ProcessProjectStubsRequest(BaseTestGen *test
 }
 
 Status Server::TestsGenServiceImpl::failedToLoadCDbStatus(const CompilationDatabaseException &e) {
-    return Status(StatusCode::INVALID_ARGUMENT,
-                  "Failed to find compile_commands.json:\n" + string(e.what()));
+    return {StatusCode::INVALID_ARGUMENT, "Failed to find compile_commands.json:\n" + string(e.what())};
 }
 
 Status Server::TestsGenServiceImpl::PrintModulesContent(ServerContext *context,
@@ -655,6 +654,7 @@ Status Server::TestsGenServiceImpl::GetProjectTargets(ServerContext *context,
         ProjectTargetsWriter targetsWriter{ response };
         targetsWriter.writeResponse(projectContext, targets);
     } catch (CompilationDatabaseException const &e) {
+        LOG_S(ERROR) << "Compilation database error: " << e.what();
         return failedToLoadCDbStatus(e);
     }
     return Status::OK;

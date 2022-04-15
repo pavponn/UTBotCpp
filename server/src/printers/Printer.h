@@ -220,6 +220,9 @@ namespace printer {
                                const string& name,
                                const string& stubName, bool needToTypedef, bool makeStatic);
 
+        void writeAccessPrivateMacros(types::TypesHandler const *typesHandler, const Tests &tests, bool onlyChangeable,
+                                      const std::function<bool(tests::Tests::MethodDescription const &)> &methodFilter);
+
         void writeAccessPrivateMacros(types::TypesHandler const *typesHandler, const Tests &tests, bool onlyChangeable);
 
         void genStubForStructFunctionPointer(const string& structName,

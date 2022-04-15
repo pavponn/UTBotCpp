@@ -47,7 +47,7 @@ UserProjectConfiguration::RunProjectConfigurationCommands(const fs::path &buildD
         cmakeOptions.emplace_back("..");
         ShellExecTask::ExecutionParameters cmakeParams(Paths::getCMake(), cmakeOptions);
         ShellExecTask::ExecutionParameters bearMakeParams(Paths::getBear(),
-                                                          {Paths::getMake(), MakefileUtils::threadFlag()});
+                                                          {Paths::getMake(), MakefileUtils::threadFlag(), "--always-make"});
 
 
         fs::path cmakeListsPath = getCmakeListsPath(buildDirPath);

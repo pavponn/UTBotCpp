@@ -18,6 +18,37 @@ static void updateIfNotCompleteType(types::TypeSupport &typeSupport,
     }
 }
 
+bool has_private_array(const types::Type &type, const types::TypesHandler &typesHandler) {
+    switch (typesHandler.getTypeKind(type)) {
+        case types::TypeKind::STRUCT:
+            for (const auto &field: typesHandler.getStructInfo(type).fields) {
+                if (field.type.isArray() && field.accessSpecifier != types::AccessSpecifier::AS_pubic) {
+                    return true;
+                }
+                return has_private_array(field.type, typesHandler);
+            }
+            break;
+        case types::TypeKind::UNION:
+            for (const auto &field: typesHandler.getUnionInfo(type).fields) {
+                if (field.type.isArray() && field.accessSpecifier != types::AccessSpecifier::AS_pubic) {
+                    return true;
+                }
+                return has_private_array(field.type, typesHandler);
+            }
+            break;
+        case types::TypeKind::OBJECT_POINTER:
+            return has_private_array(type.baseTypeObj(), typesHandler);
+        case types::TypeKind::ARRAY:
+            return has_private_array(type.baseTypeObj(), typesHandler);
+        case types::TypeKind::PRIMITIVE:
+        case types::TypeKind::ENUM:
+        case types::TypeKind::UNKNOWN:
+        default:
+            return false;
+    }
+    return false;
+}
+
 void FeaturesFilter::filter(utbot::SettingsContext const &settingsContext,
                             const types::TypesHandler &typesHandler,
                             tests::TestsMap &testsMap,
@@ -84,6 +115,76 @@ void FeaturesFilter::filter(utbot::SettingsContext const &settingsContext,
                              tests.commentBlocks.push_back(message.str());
                              return true;
                          }
+
+                         if (method.isClassMethod() && !typesHandler.getStructInfo(method.classObj->type).canBeConstruct) {
+                             std::stringstream message;
+                             message
+                                     << "Method '" << method.name
+                                     << "' was skipped, as class '" << method.getClassTypeName().value()
+                                     << "' can't be construct in current version";
+                             LOG_S(DEBUG) << message.str();
+                             tests.commentBlocks.push_back(message.str());
+                             return true;
+                         }
+
+                         for (const auto &param: method.params) {
+                             if (typesHandler.isStruct(param.type)) {
+                                 for (const auto &field: typesHandler.getStructInfo(param.type).fields) {
+                                     if (field.type.isArray() && field.accessSpecifier != types::AccessSpecifier::AS_pubic) {
+                                         std::stringstream message;
+                                         message
+                                                 << "Method '" << method.name
+                                                 << "' was skipped, as class '" << param.type.typeName()
+                                                 << "' has private array member '" << field.name << "'";
+                                         LOG_S(DEBUG) << message.str();
+                                         tests.commentBlocks.push_back(message.str());
+                                         return true;
+                                     }
+                                 }
+                             }
+                         }
+
+                         if (typesHandler.isStruct(method.returnType)) {
+                             for (const auto &field: typesHandler.getStructInfo(method.returnType).fields) {
+                                 if (field.type.isArray() && field.accessSpecifier != types::AccessSpecifier::AS_pubic) {
+                                     std::stringstream message;
+                                     message
+                                             << "Method '" << method.name
+                                             << "' was skipped, as class '" << method.returnType.typeName()
+                                             << "' has private array member '" << field.name << "'";
+                                     LOG_S(DEBUG) << message.str();
+                                     tests.commentBlocks.push_back(message.str());
+                                     return true;
+                                 }
+                             }
+                         }
+
+                         if (method.isClassMethod()) {
+                             for (const auto &field : typesHandler.getStructInfo(method.classObj->type).fields) {
+                                 if (field.type.isArray() && field.accessSpecifier != types::AccessSpecifier::AS_pubic) {
+                                     std::stringstream message;
+                                     message
+                                             << "Method '" << method.name
+                                             << "' was skipped, as class '" << method.getClassTypeName().value()
+                                             << "' has private array member '" << field.name << "'";
+                                     LOG_S(DEBUG) << message.str();
+                                     tests.commentBlocks.push_back(message.str());
+                                     return true;
+                                 }
+                             }
+                         }
+
+                         if (method.accessSpecifier != types::AS_pubic) {
+                             std::stringstream message;
+                             message
+                                     << "Method '" << method.name
+                                     << "' from class '" << method.getClassTypeName().value_or("")
+                                     << "' was skipped, as private";
+                             LOG_S(DEBUG) << message.str();
+                             tests.commentBlocks.push_back(message.str());
+                             return true;
+                         }
+
                          unsupportedStatistics["passed features filter"]++;
 
                          return false;

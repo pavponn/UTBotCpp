@@ -29,6 +29,13 @@ namespace types {
     enum class PointerUsage;
     enum class ReferenceType;
 
+    enum AccessSpecifier {
+        AS_pubic,
+        AS_protected,
+        AS_private,
+        AS_none
+    };
+
     class Type {
     public:
         Type() = default;
@@ -265,12 +272,6 @@ namespace types {
         unsigned int size;
         // reassigned in structFields
         unsigned int offset = 0;
-        enum AccessSpecifier {
-            AS_pubic,
-            AS_protected,
-            AS_private,
-            AS_none
-        };
         AccessSpecifier accessSpecifier = AS_pubic;
     };
 
@@ -289,6 +290,9 @@ namespace types {
 
         FPointerMap functionFields{};
         bool hasUnnamedFields;
+        //TODO delete then can construct without initializer list
+        bool canBeConstruct;
+        bool isCLike;
     };
 
     struct UnionInfo: TypeInfo {
@@ -664,7 +668,6 @@ namespace types {
         };
         std::vector<FunctionParamInfo> params;
     };
-
 }
 
 #endif //UNITTESTBOT_TYPES_H

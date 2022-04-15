@@ -42,6 +42,7 @@ void FunctionDeclsMatchCallback::run(const MatchFinder::MatchResult &Result) {
         }
         const clang::QualType realReturnType = FS->getReturnType().getCanonicalType();
         methodDescription.returnType = ParamsHandler::getType(realReturnType, realReturnType, sourceManager);
+        methodDescription.accessSpecifier = types::AS_pubic;
         if (onlyReturnTypes) {
             addMethod(sourceFilePath, methodDescription);
             return;
@@ -67,6 +68,7 @@ void FunctionDeclsMatchCallback::run(const MatchFinder::MatchResult &Result) {
             methodDescription.classObj = { classType,
                                            classType.typeName() + "_obj",
                                            std::nullopt };
+            methodDescription.accessSpecifier = getAS(FS);
         }
         methodDescription.returnType = ParamsHandler::getType(realReturnType, realReturnType, sourceManager);
         methodDescription.hasIncompleteReturnType = ClangUtils::isIncomplete(realReturnType);
