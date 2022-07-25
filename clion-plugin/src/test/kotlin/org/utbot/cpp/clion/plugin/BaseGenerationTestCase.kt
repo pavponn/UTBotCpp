@@ -16,7 +16,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
 import org.utbot.cpp.clion.plugin.client.Client
 import org.utbot.cpp.clion.plugin.client.logger.SystemWriter
-import org.utbot.cpp.clion.plugin.settings.UTBotAllSettings
+import org.utbot.cpp.clion.plugin.settings.UTBotSettings
 import org.utbot.cpp.clion.plugin.ui.targetsToolWindow.UTBotTargetsController
 import org.utbot.cpp.clion.plugin.utils.getClient
 import org.utbot.cpp.clion.plugin.utils.logger
@@ -59,7 +59,7 @@ abstract class BaseGenerationTestCase {
     val fixture: CodeInsightTestFixture = createFixture()
     val project: Project
         get() = fixture.project
-    val settings: UTBotAllSettings
+    val settings: UTBotSettings
         get() = project.utbotSettings
     val client: Client
         get() = project.getClient()

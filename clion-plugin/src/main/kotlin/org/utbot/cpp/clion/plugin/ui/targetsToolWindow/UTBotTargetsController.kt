@@ -8,7 +8,7 @@ import org.utbot.cpp.clion.plugin.client.requests.ProjectTargetsRequest
 import org.utbot.cpp.clion.plugin.listeners.ConnectionStatus
 import org.utbot.cpp.clion.plugin.listeners.UTBotEventsListener
 import org.utbot.cpp.clion.plugin.listeners.UTBotSettingsChangedListener
-import org.utbot.cpp.clion.plugin.settings.UTBotAllSettings
+import org.utbot.cpp.clion.plugin.settings.UTBotSettings
 import org.utbot.cpp.clion.plugin.utils.getClient
 import org.utbot.cpp.clion.plugin.utils.invokeOnEdt
 import org.utbot.cpp.clion.plugin.utils.logger
@@ -87,7 +87,7 @@ class UTBotTargetsController(val project: Project) {
             // if user specifies some custom target path in settings, it will be added if not already present
             connection.subscribe(
                 UTBotSettingsChangedListener.TOPIC,
-                UTBotSettingsChangedListener { settings: UTBotAllSettings ->
+                UTBotSettingsChangedListener { settings: UTBotSettings ->
                     val possiblyNewTargetPath = settings.targetPath
                     addTargetPathIfNotPresent(possiblyNewTargetPath)
                 })

@@ -2,10 +2,7 @@ package org.utbot.cpp.clion.plugin.settings
 
 import com.intellij.openapi.project.Project
 import org.utbot.cpp.clion.plugin.ui.targetsToolWindow.UTBotTarget
-import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.components.State
-import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.guessProjectDir
@@ -18,90 +15,13 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 
-/**
- * Settings that are the same for all projects
- */
 @Service
-@State(
-    name = "UtBotGlobalSettings",
-    storages = [Storage("utbot-global-settings.xml")]
-)
-class UTBotGlobalSettings : PersistentStateComponent<UTBotGlobalSettings.State> {
-    data class State(
-        var port: Int = UTBotAllSettings.DEFAULT_PORT,
-        var serverName: String = UTBotAllSettings.DEFAULT_HOST,
-    )
-
-    private var myState: State = State()
-    override fun getState(): State = myState
-    override fun loadState(state: State) {
-        myState = state
-    }
-}
-
-
-/**
- * Settings that are specific to each project
- */
-@Service
-@State(
-    name = "UtBotSettings",
-    storages = [Storage("utbot-settings.xml")]
-)
-class UTBotProjectSettings(val project: Project) : PersistentStateComponent<UTBotProjectSettings.State> {
-    private var myState = State()
-
-    // serialized by the ide
-    data class State(
-        var projectPath: String? = null,
-        var buildDirRelativePath: String = "build-utbot",
-        var testDirPath: String = "",
-        var targetPath: String = UTBotTarget.autoTarget.path,
-        var remotePath: String = "",
-        var sourceDirs: Set<String> = setOf(),
-        var cmakeOptions: List<String> = DEFAULT_CMAKE_OPTIONS,
-        var generateForStaticFunctions: Boolean = true,
-        var useStubs: Boolean = true,
-        var useDeterministicSearcher: Boolean = true,
-        var verbose: Boolean = false,
-        var timeoutPerFunction: Int = 0,
-        var timeoutPerTest: Int = 30
-    )
-
-    override fun getState() = myState
-
-    override fun loadState(state: State) {
-        myState = state
-    }
-
-    companion object {
-        val DEFAULT_CMAKE_OPTIONS = listOf("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON", "-DCMAKE_EXPORT_LINK_COMMANDS=ON")
-    }
-}
-
-data class UTBotSettingsModel(
-    var port: Int,
-    var serverName: String,
-    var projectPath: String,
-    var buildDirRelativePath: String,
-    var testDirPath: String,
-    var targetPath: String,
-    var remotePath: String,
-    var sourceDirs: Set<String>,
-    var cmakeOptions: String,
-    var generateForStaticFunctions: Boolean,
-    var useStubs: Boolean,
-    var useDeterministicSearcher: Boolean,
-    var verbose: Boolean,
-    var timeoutPerFunction: Int,
-    var timeoutPerTest: Int
-)
-
-@Service
-class UTBotAllSettings(val project: Project) {
+class UTBotSettings(val project: Project) {
+    //TODO: let's initialize logger similarly everywhere
     private val logger = Logger.getInstance(this::class.java)
-    private val projectSettings: UTBotProjectSettings.State get() = project.service<UTBotProjectSettings>().state
-    private val globalSettings: UTBotGlobalSettings.State get() = service<UTBotGlobalSettings>().state
+
+    private val projectSettings: UTBotProjectDependentSettings.State get() = project.service<UTBotProjectDependentSettings>().state
+    private val globalSettings: UTBotProjectIndependentSettings.State get() = service<UTBotProjectIndependentSettings>().state
 
     var port: Int
         get() = globalSettings.port
@@ -117,6 +37,7 @@ class UTBotAllSettings(val project: Project) {
 
     var projectPath: String
         get() {
+            //TODO: this logic should be moved to projectSettings
             if (projectSettings.projectPath == null) {
                 projectSettings.projectPath = project.guessProjectDir()?.path
                     ?: error("Could not guess project path! Should be specified in settings by user")
@@ -282,7 +203,6 @@ class UTBotAllSettings(val project: Project) {
         timeoutPerTest = model.timeoutPerTest
     }
 
-
     fun fireUTBotSettingsChanged() {
         project.messageBus.syncPublisher(UTBotSettingsChangedListener.TOPIC).settingsChanged(this)
     }
@@ -293,3 +213,21 @@ class UTBotAllSettings(val project: Project) {
         const val DEFAULT_PORT = 2121
     }
 }
+
+data class UTBotSettingsModel(
+    var port: Int,
+    var serverName: String,
+    var projectPath: String,
+    var buildDirRelativePath: String,
+    var testDirPath: String,
+    var targetPath: String,
+    var remotePath: String,
+    var sourceDirs: Set<String>,
+    var cmakeOptions: String,
+    var generateForStaticFunctions: Boolean,
+    var useStubs: Boolean,
+    var useDeterministicSearcher: Boolean,
+    var verbose: Boolean,
+    var timeoutPerFunction: Int,
+    var timeoutPerTest: Int
+)

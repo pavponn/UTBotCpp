@@ -25,7 +25,7 @@ import java.awt.Dimension
 class UTBotConfigurable(private val myProject: Project) : BoundConfigurable(
     "Project Settings for Generating Tests"
 ) {
-    private val utbotSettings: UTBotAllSettings get() = myProject.service()
+    private val utbotSettings: UTBotSettings get() = myProject.service()
     private val logger = Logger.getInstance("ProjectConfigurable")
     private val panel by lazy { createMainPanel() }
 

@@ -26,7 +26,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.utbot.cpp.clion.plugin.grpc.getVersionGrpcRequest
 import org.utbot.cpp.clion.plugin.client.GrpcClient
-import org.utbot.cpp.clion.plugin.settings.UTBotAllSettings
+import org.utbot.cpp.clion.plugin.settings.UTBotSettings
 import org.utbot.cpp.clion.plugin.settings.UTBotSettingsModel
 import org.utbot.cpp.clion.plugin.ui.wizard.UTBotWizardStep
 import org.utbot.cpp.clion.plugin.utils.isWindows
@@ -100,8 +100,8 @@ class ConnectionStep(
     init {
         useDefaults.addOnChangeListener { newValue ->
             if (newValue) {
-                portTextField.text = UTBotAllSettings.DEFAULT_PORT.toString()
-                hostTextField.text = UTBotAllSettings.DEFAULT_HOST
+                portTextField.text = UTBotSettings.DEFAULT_PORT.toString()
+                hostTextField.text = UTBotSettings.DEFAULT_HOST
                 remotePathTextField.text = project.utbotSettings.projectPath
                 if (isWindows)
                     remotePathTextField.text = toWSLPathOnWindows(remotePathTextField.text)
@@ -114,7 +114,7 @@ class ConnectionStep(
         runCatching {
             GrpcClient(port, host, "DummyId").use { client ->
                 serverVersion = client.stub.handshake(getVersionGrpcRequest()).version
-                if (serverVersion != UTBotAllSettings.clientVersion)
+                if (serverVersion != UTBotSettings.clientVersion)
                     return ConnectionStatus.warning
                 return ConnectionStatus.connected
             }
@@ -232,7 +232,7 @@ class ConnectionStep(
                 val warningMessage: () -> String = {
                     "⚠️ Warning! Versions are different" +
                             if (serverVersion != null)
-                                ": Server: $serverVersion Client: ${UTBotAllSettings.clientVersion}"
+                                ": Server: $serverVersion Client: ${UTBotSettings.clientVersion}"
                             else ""
                 }
                 label(warningMessage()).visibleIf(
