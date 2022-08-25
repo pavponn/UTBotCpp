@@ -1,5 +1,6 @@
 package org.utbot.cpp.clion.plugin.ui.statusBar
 
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.util.Consumer
@@ -8,17 +9,36 @@ import org.utbot.cpp.clion.plugin.settings.settings
 import java.awt.Component
 import java.awt.event.MouseEvent
 
-class UTBotStatusBarVerboseWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
-    private var statusBar: StatusBar? = null
+class UTBotStatusBarVerboseWidget(val project: Project) : StatusBarWidget,
+    StatusBarWidget.TextPresentation {
+    private var currentStatusBar: StatusBar? = null
+    // this connection will be disposed when this widget will be disposed, see VerboseModeWidgetFactory.disposeWidget()
+    private val connection = project.messageBus.connect(this)
+
+    init {
+        // when user changes verbose mode in settings this listener will update the widget
+        connection.subscribe(UTBotSettingsChangedListener.TOPIC, UTBotSettingsChangedListener {
+            updateWidget()
+        })
+    }
 
     override fun ID(): String = WIDGET_ID
 
+    /**
+     * Called when adding widget to statusbar
+     *
+     * some cases when this happens:
+     * - when user enabled widget
+     * - status bar was created
+     * - StatusBarWidgetsManager.updateWidget was called and this widget must be created
+     */
     override fun install(statusbar: StatusBar) {
-        this.statusBar = statusbar
-        statusBar?.updateWidget(ID())
-        statusbar.project?.messageBus?.connect()?.subscribe(UTBotSettingsChangedListener.TOPIC, UTBotSettingsChangedListener {
-            statusbar.updateWidget(ID())
-        })
+        this.currentStatusBar = statusbar
+        updateWidget()
+    }
+
+    private fun updateWidget() {
+        currentStatusBar?.updateWidget(ID())
     }
 
     override fun dispose() {}
@@ -26,17 +46,14 @@ class UTBotStatusBarVerboseWidget : StatusBarWidget, StatusBarWidget.TextPresent
     override fun getTooltipText() = VerboseModeWidgetFactory.STATUS_BAR_DISPLAY_NAME
 
     override fun getClickConsumer() = Consumer<MouseEvent> { _ ->
-        val project = statusBar?.project ?: return@Consumer
         val settings = project.settings.storedSettings
         settings.verbose = !settings.verbose
-        statusBar?.updateWidget(ID())
+        updateWidget()
     }
 
     override fun getText(): String {
-        val project = statusBar?.project ?: return ""
         return if (project.settings.storedSettings.verbose) "✔ UTBot: verbose formatting" else "❌ UTBot: verbose formatting"
     }
-
 
     override fun getAlignment(): Float = Component.CENTER_ALIGNMENT
 

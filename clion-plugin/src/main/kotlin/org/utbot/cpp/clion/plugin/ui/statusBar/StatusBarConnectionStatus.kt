@@ -12,12 +12,16 @@ import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.Consumer
-import org.utbot.cpp.clion.plugin.actions.AskServerToGenerateJsonForProjectConfiguration
 import org.utbot.cpp.clion.plugin.actions.configure.ConfigureProjectAction
 import org.utbot.cpp.clion.plugin.actions.configure.ReconfigureProjectAction
 import org.utbot.cpp.clion.plugin.actions.ShowWizardAction
+import org.utbot.cpp.clion.plugin.actions.TogglePluginAction
+import org.utbot.cpp.clion.plugin.client.ManagedClient
 import org.utbot.cpp.clion.plugin.listeners.ConnectionStatus
+import org.utbot.cpp.clion.plugin.listeners.PluginActivationListener
 import org.utbot.cpp.clion.plugin.listeners.UTBotEventsListener
+import org.utbot.cpp.clion.plugin.settings.settings
+import org.utbot.cpp.clion.plugin.utils.client
 import java.awt.Component
 import java.awt.Point
 import java.awt.event.MouseEvent
@@ -30,7 +34,7 @@ class ConnectionStatusBarWidgetFactory : StatusBarWidgetFactory {
 
     override fun isAvailable(project: Project): Boolean = true
 
-    override fun createWidget(project: Project): StatusBarWidget = UTBotStatusBarWidget()
+    override fun createWidget(project: Project): StatusBarWidget = UTBotStatusBarWidget(project)
 
     override fun disposeWidget(widget: StatusBarWidget) {}
 
@@ -41,27 +45,33 @@ class ConnectionStatusBarWidgetFactory : StatusBarWidgetFactory {
     }
 }
 
-class UTBotStatusBarWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
+class UTBotStatusBarWidget(val project: Project) : StatusBarWidget, StatusBarWidget.TextPresentation {
     private var statusBar: StatusBar? = null
-    private var myConnectionStatusText: String = ConnectionStatus.BROKEN.description
+    private val client: ManagedClient = project.client
+    private val myStatusText: String get() = if (project.settings.storedSettings.isPluginEnabled) client.connectionStatus.description else "disabled"
 
     override fun ID(): String = WIDGET_ID
 
     override fun install(statusbar: StatusBar) {
         this.statusBar = statusbar
-        statusbar.project?.messageBus?.connect()?.subscribe(
-            UTBotEventsListener.CONNECTION_CHANGED_TOPIC,
-            object : UTBotEventsListener {
-                override fun onConnectionChange(oldStatus: ConnectionStatus, newStatus: ConnectionStatus) {
-                    myConnectionStatusText = newStatus.description
-                    statusBar?.updateWidget(ID())
-                }
+
+        with(project.messageBus.connect()) {
+            subscribe(
+                UTBotEventsListener.CONNECTION_CHANGED_TOPIC,
+                object : UTBotEventsListener {
+                    override fun onConnectionChange(oldStatus: ConnectionStatus, newStatus: ConnectionStatus) {
+                        statusBar?.updateWidget(ID())
+                    }
+                })
+            subscribe(PluginActivationListener.TOPIC, PluginActivationListener { enabled ->
+                statusBar?.updateWidget(ID())
             })
+        }
     }
 
     override fun dispose() {}
 
-    override fun getTooltipText() = "UTBot: connection status"
+    override fun getTooltipText() = "UTBot: Connection status or 'disabled' if plugin is disabled"
 
     override fun getClickConsumer() = Consumer<MouseEvent> { event ->
         val component = event.component
@@ -74,7 +84,7 @@ class UTBotStatusBarWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
         popup.show(RelativePoint(component, popupLocation))
     }
 
-    override fun getText(): String = "UTBot: $myConnectionStatusText"
+    override fun getText(): String = "UTBot: $myStatusText"
 
     override fun getAlignment(): Float = Component.CENTER_ALIGNMENT
 
@@ -106,6 +116,8 @@ object StatusBarActionsPopup {
         actionGroup.add(ConfigureProjectAction())
         actionGroup.addSeparator()
         actionGroup.addAction(ReconfigureProjectAction())
+        actionGroup.addSeparator()
+        actionGroup.add(TogglePluginAction())
 
         return actionGroup
     }

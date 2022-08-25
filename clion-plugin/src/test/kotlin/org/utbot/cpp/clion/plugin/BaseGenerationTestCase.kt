@@ -17,13 +17,14 @@ import org.utbot.cpp.clion.plugin.client.Client
 import org.utbot.cpp.clion.plugin.client.logger.SystemWriter
 import org.utbot.cpp.clion.plugin.settings.settings
 import org.utbot.cpp.clion.plugin.ui.targetsToolWindow.UTBotTargetsController
-import org.utbot.cpp.clion.plugin.utils.getCurrentClient
+import org.utbot.cpp.clion.plugin.utils.client
 import org.utbot.cpp.clion.plugin.utils.logger
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.name
 import kotlinx.coroutines.Job
+import org.utbot.cpp.clion.plugin.client.ManagedClient
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(SwingEdtInterceptor::class)
@@ -55,8 +56,7 @@ abstract class BaseGenerationTestCase {
     val fixture: CodeInsightTestFixture = createFixture()
     val project: Project
         get() = fixture.project
-    val client: Client
-        get() = project.getCurrentClient()
+    val client: ManagedClient = project.client
     val targetsController = UTBotTargetsController(project)
 
     init {

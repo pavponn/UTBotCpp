@@ -1,15 +1,16 @@
 package org.utbot.cpp.clion.plugin.ui.targetsToolWindow
 
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.ui.CollectionListModel
+import org.utbot.cpp.clion.plugin.client.ManagedClient
 import org.utbot.cpp.clion.plugin.client.requests.ProjectTargetsRequest
 import org.utbot.cpp.clion.plugin.grpc.getProjectTargetsGrpcRequest
 import org.utbot.cpp.clion.plugin.listeners.ConnectionStatus
 import org.utbot.cpp.clion.plugin.listeners.UTBotEventsListener
 import org.utbot.cpp.clion.plugin.settings.UTBotAllProjectSettings
 import org.utbot.cpp.clion.plugin.settings.settings
-import org.utbot.cpp.clion.plugin.utils.getCurrentClient
 import org.utbot.cpp.clion.plugin.utils.invokeOnEdt
 import org.utbot.cpp.clion.plugin.utils.logger
 import testsgen.Testgen
@@ -23,6 +24,7 @@ class UTBotTargetsController(val project: Project) {
 
     private var areTargetsUpToDate = false
     private val targetsUiModel = CollectionListModel(mutableListOf<UTBotTarget>())
+    private val client = project.service<ManagedClient>()
     val targetsToolWindow: UTBotTargetsToolWindow by lazy { UTBotTargetsToolWindow(targetsUiModel, this) }
 
     val targets: List<UTBotTarget>
@@ -36,7 +38,6 @@ class UTBotTargetsController(val project: Project) {
     fun isTargetUpToDate(path: String): Boolean = areTargetsUpToDate && targets.find { it.path == path } != null
 
     fun requestTargetsFromServer() {
-        val currentClient = project.getCurrentClient()
         areTargetsUpToDate = false
 
         invokeOnEdt {
@@ -74,7 +75,8 @@ class UTBotTargetsController(val project: Project) {
                     targetsToolWindow.setBusy(false)
                 }
             }).let { targetsRequest ->
-            if (!currentClient.isServerAvailable()) {
+            //todo: throw exception from client and handle it here
+            if (!client.isServerAvailable()) {
                 logger.error { "Could not request targets from server: server is unavailable!" }
                 invokeOnEdt {
                     targetsToolWindow.setBusy(false)
@@ -82,7 +84,7 @@ class UTBotTargetsController(val project: Project) {
                 return
             }
             logger.trace { "Requesting project targets from server!" }
-            currentClient.executeRequestIfNotDisposed(targetsRequest)
+            client.executeRequest(targetsRequest)
         }
     }
 
