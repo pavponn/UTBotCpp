@@ -15,17 +15,21 @@ class VerboseModeWidgetFactory : StatusBarWidgetFactory {
      * Should the widget be created or disposed
      *
      * @return false, then widget will be disposed after StatusBarWidgetsFactory.update call
-     * or won't be created at all. true means that widget will be created with [createWidget]
+     * or won't be created at all. true means that widget will be created with [createWidget], if not already
      *
-     * @see UTBotStatusBarVerboseWidget's init, where listener to Enable/disable events is created.
+     * @see UTBotStartupActivity, where listener to Enable/disable events is created.
      * When user enables/disables plugin, first the setting `isPluginEnabled` changes, then listeners for this TOPIC
-     * are called. Listener created from
+     * are called. Listener in [UTBotStartupActivity] calls StatusBarWidgetsManager.updateWidget to update this widget.
+     * See java docs for StatusBarWidgetFactory for more info.
      */
     override fun isAvailable(project: Project): Boolean {
         return project.settings.storedSettings.isPluginEnabled
     }
 
-    //todo: docs
+    /**
+     * Widget is created on project initialization, and recreated if it's availability is changed and
+     * StatusBarWidgetsManager.updateWidget was called.
+     */
     override fun createWidget(project: Project): StatusBarWidget {
         return UTBotStatusBarVerboseWidget(project)
     }
